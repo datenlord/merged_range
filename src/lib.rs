@@ -358,6 +358,16 @@ where
                 ) => rg_end.cmp(range_end),
             })
     }
+
+    /// Returns an iterator over the ranges
+    pub fn iter<'a>(&'a self) -> std::slice::Iter<'a, (Bound<K>, Bound<K>)> {
+        self.ranges.iter()
+    }
+
+    /// Returns an iterator that allows modifying each value.
+    pub fn iter_mut<'a>(&'a mut self) -> std::slice::IterMut<'a, (Bound<K>, Bound<K>)> {
+        self.ranges.iter_mut()
+    }
 }
 
 impl<K, R> FromIterator<R> for MergedRange<K>
@@ -371,6 +381,45 @@ where
             set.insert_range(&range);
             set
         })
+    }
+}
+
+impl<K> IntoIterator for MergedRange<K>
+where
+    K: Ord + Clone,
+{
+    type Item = (Bound<K>, Bound<K>);
+
+    type IntoIter = std::vec::IntoIter<(Bound<K>, Bound<K>)>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.ranges.into_iter()
+    }
+}
+
+impl<'a, K> IntoIterator for &'a MergedRange<K>
+where
+    K: Ord + Clone,
+{
+    type Item = &'a (Bound<K>, Bound<K>);
+
+    type IntoIter = std::slice::Iter<'a, (Bound<K>, Bound<K>)>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, K> IntoIterator for &'a mut MergedRange<K>
+where
+    K: Ord + Clone,
+{
+    type Item = &'a mut (Bound<K>, Bound<K>);
+
+    type IntoIter = std::slice::IterMut<'a, (Bound<K>, Bound<K>)>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }
 
@@ -530,5 +579,75 @@ mod test {
         assert!(set.contains_range(&(50..)));
         assert!(!set.contains_range(&(..1)));
         assert!(!set.contains_range(&(..)));
+    }
+
+    #[test]
+    fn test_into_iter() {
+        let set = MergedRange::from_iter(vec![3..6, 9..20]);
+
+        let iter_elems: Vec<&(Bound<i32>, Bound<i32>)> = (&set).into_iter().collect();
+        assert_eq!(
+            iter_elems,
+            vec![
+                &(Bound::Included(3), Bound::Excluded(6)),
+                &(Bound::Included(9), Bound::Excluded(20))
+            ]
+        )
+    }
+
+    #[test]
+    fn test_into_iter_mut() {
+        let mut set = MergedRange::from_iter(vec![3..6, 9..20]);
+
+        let iter_elems: Vec<&mut (Bound<i32>, Bound<i32>)> = (&mut set).into_iter().collect();
+        assert_eq!(
+            iter_elems,
+            vec![
+                &mut (Bound::Included(3), Bound::Excluded(6)),
+                &mut (Bound::Included(9), Bound::Excluded(20))
+            ]
+        )
+    }
+
+    #[test]
+    fn test_into_iter_value() {
+        let set = MergedRange::from_iter(vec![3..6, 9..20]);
+
+        let iter_elems: Vec<(Bound<i32>, Bound<i32>)> = set.into_iter().collect();
+        assert_eq!(
+            iter_elems,
+            vec![
+                (Bound::Included(3), Bound::Excluded(6)),
+                (Bound::Included(9), Bound::Excluded(20))
+            ]
+        )
+    }
+
+    #[test]
+    fn test_iter() {
+        let set = MergedRange::from_iter(vec![3..6, 9..20]);
+
+        let iter_elems: Vec<&(Bound<i32>, Bound<i32>)> = set.iter().collect();
+        assert_eq!(
+            iter_elems,
+            vec![
+                &(Bound::Included(3), Bound::Excluded(6)),
+                &(Bound::Included(9), Bound::Excluded(20))
+            ]
+        )
+    }
+
+    #[test]
+    fn test_iter_mut() {
+        let mut set = MergedRange::from_iter(vec![3..6, 9..20]);
+
+        let iter_elems: Vec<&mut (Bound<i32>, Bound<i32>)> = set.iter_mut().collect();
+        assert_eq!(
+            iter_elems,
+            vec![
+                &mut (Bound::Included(3), Bound::Excluded(6)),
+                &mut (Bound::Included(9), Bound::Excluded(20))
+            ]
+        )
     }
 }
